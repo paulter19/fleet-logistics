@@ -36,6 +36,11 @@ interface FleetContextValue {
   markAllAlertsRead: () => Promise<void>
   createAlert: (input: Omit<import('../types').Alert, 'id' | 'createdAt' | 'read'>) => Promise<void>
   createDVIR: (input: import('../types').DVIRInput) => Promise<void>
+  createUser: (input: import('../types').UserInput) => Promise<void>
+  updateUser: (id: string, input: Partial<import('../types').UserInput>) => Promise<void>
+  elevateUserRole: (id: string, role: import('../types').UserRole) => Promise<void>
+  updateUserStatus: (id: string, status: import('../types').UserStatus) => Promise<void>
+  deleteUser: (id: string) => Promise<void>
   saveSettings: (settings: FleetState['settings']) => Promise<void>
   restoreDemoData: () => Promise<void>
 }
@@ -97,6 +102,11 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       markAllAlertsRead: () => run(() => fleetService.markAllAlertsRead()),
       createAlert: (input) => run(() => fleetService.createAlert(input)),
       createDVIR: (input) => run(() => fleetService.createDVIR(input)),
+      createUser: (input) => run(() => fleetService.createUser(input)),
+      updateUser: (id, input) => run(() => fleetService.updateUser(id, input)),
+      elevateUserRole: (id, role) => run(() => fleetService.elevateUserRole(id, role)),
+      updateUserStatus: (id, status) => run(() => fleetService.updateUserStatus(id, status)),
+      deleteUser: (id) => run(() => fleetService.deleteUser(id)),
       saveSettings: (settings) => run(() => fleetService.saveSettings(settings)),
       restoreDemoData: () => run(() => fleetService.restoreDemoData()),
     }),

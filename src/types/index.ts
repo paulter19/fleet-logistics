@@ -1,4 +1,12 @@
-export type UserRole = 'fleet_manager' | 'dispatcher' | 'driver' | 'mechanic'
+export type UserRole =
+  | 'fleet_manager'
+  | 'dispatcher'
+  | 'safety_officer'
+  | 'mechanic'
+  | 'driver'
+  | 'staff'
+
+export type UserStatus = 'active' | 'suspended' | 'pending'
 
 export interface User {
   id: string
@@ -7,6 +15,21 @@ export interface User {
   role: UserRole
   title: string
   company: string
+  status: UserStatus
+  phone?: string
+  driverId?: string | null
+  createdAt?: string
+}
+
+export interface UserInput {
+  name: string
+  email: string
+  role: UserRole
+  title: string
+  company: string
+  status: UserStatus
+  phone?: string
+  driverId?: string | null
 }
 
 export type VehicleStatus = 'active' | 'idle' | 'maintenance' | 'out_of_service'
@@ -176,6 +199,7 @@ export interface CompanySettings {
 }
 
 export interface FleetState {
+  users: User[]
   vehicles: Vehicle[]
   drivers: Driver[]
   trips: Trip[]

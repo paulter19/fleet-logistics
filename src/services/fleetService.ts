@@ -11,6 +11,10 @@ import type {
   MaintenanceOrder,
   Trip,
   TripInput,
+  User,
+  UserInput,
+  UserRole,
+  UserStatus,
   Vehicle,
   VehicleInput,
 } from '../types'
@@ -247,5 +251,77 @@ export async function saveSettings(settings: FleetState['settings']): Promise<Fl
   await wait(160)
   mutate((state) => ({ ...state, settings }))
   return settings
+}
+
+export async function fetchUsers(): Promise<User[]> {
+  await wait(120)
+  return getState().users || []
+}
+
+export async function createUser(input: UserInput): Promise<User> {
+  await wait(150)
+  const user: User = {
+    ...input,
+    id: createId('usr'),
+    createdAt: new Date().toISOString().slice(0, 10),
+  }
+  mutate((state) => ({
+    ...state,
+    users: [...(state.users || []), user],
+  }))
+  return user
+}
+
+export async function updateUser(id: string, input: Partial<UserInput>): Promise<User> {
+  await wait(150)
+  let updated: User | undefined
+  mutate((state) => ({
+    ...state,
+    users: (state.users || []).map((u) => {
+      if (u.id !== id) return u
+      updated = { ...u, ...input }
+      return updated
+    }),
+  }))
+  if (!updated) throw new Error('User not found.')
+  return updated
+}
+
+export async function elevateUserRole(id: string, role: UserRole): Promise<User> {
+  await wait(150)
+  let updated: User | undefined
+  mutate((state) => ({
+    ...state,
+    users: (state.users || []).map((u) => {
+      if (u.id !== id) return u
+      updated = { ...u, role }
+      return updated
+    }),
+  }))
+  if (!updated) throw new Error('User not found.')
+  return updated
+}
+
+export async function updateUserStatus(id: string, status: UserStatus): Promise<User> {
+  await wait(150)
+  let updated: User | undefined
+  mutate((state) => ({
+    ...state,
+    users: (state.users || []).map((u) => {
+      if (u.id !== id) return u
+      updated = { ...u, status }
+      return updated
+    }),
+  }))
+  if (!updated) throw new Error('User not found.')
+  return updated
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await wait(150)
+  mutate((state) => ({
+    ...state,
+    users: (state.users || []).filter((u) => u.id !== id),
+  }))
 }
 

@@ -26,13 +26,21 @@ export function resetState(): FleetState {
 }
 
 function loadState(): FleetState {
+  const seeded = seedFleet()
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw) as FleetState
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<FleetState>
+      return {
+        ...seeded,
+        ...parsed,
+        users: parsed.users && parsed.users.length > 0 ? parsed.users : seeded.users,
+        dvirInspections: parsed.dvirInspections ?? seeded.dvirInspections ?? [],
+      }
+    }
   } catch {
     /* ignore corrupt cache */
   }
-  const seeded = seedFleet()
   localStorage.setItem(KEY, JSON.stringify(seeded))
   return seeded
 }
