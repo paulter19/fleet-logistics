@@ -9,6 +9,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
 import type { MaintenanceOrder, MaintenanceStatus } from '../types'
+import { exportToCSV } from '../utils/csv'
 import { formatDate, formatMoney, labelize } from '../utils/format'
 
 export function MaintenancePage() {
@@ -32,6 +33,29 @@ export function MaintenancePage() {
     })
   }, [data, q, status])
 
+  const handleExportCSV = () => {
+    if (!data) return
+    exportToCSV('maintenance_work_orders', rows, [
+      { key: 'workOrder', label: 'Work Order #' },
+      {
+        key: (o) => {
+          const v = data.vehicles.find((veh) => veh.id === o.vehicleId)
+          return v ? v.unitNumber : 'Unassigned'
+        },
+        label: 'Vehicle Unit',
+      },
+      { key: 'title', label: 'Title / Service' },
+      { key: 'type', label: 'Type' },
+      { key: 'status', label: 'Status' },
+      { key: 'vendor', label: 'Vendor / Shop' },
+      { key: 'scheduledAt', label: 'Scheduled Date' },
+      { key: 'completedAt', label: 'Completed Date' },
+      { key: 'cost', label: 'Cost ($)' },
+      { key: 'notes', label: 'Notes' },
+    ])
+    notify('info', 'Exported maintenance records to CSV')
+  }
+
   return (
     <PageGate loading={loading} error={error} ready={Boolean(data)}>
       {data ? (
@@ -44,14 +68,19 @@ export function MaintenancePage() {
                 {data.maintenance.filter((o) => o.status === 'overdue').length} overdue
               </p>
             </div>
-            <Button
-              onClick={() => {
-                setEditing(null)
-                setOpen(true)
-              }}
-            >
-              New work order
-            </Button>
+            <div className="header-actions">
+              <Button variant="ghost" onClick={handleExportCSV}>
+                Export CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                New work order
+              </Button>
+            </div>
           </div>
           <div className="toolbar">
             <div className="grow">

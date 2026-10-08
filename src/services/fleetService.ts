@@ -218,8 +218,34 @@ export async function markAllAlertsRead(): Promise<void> {
   }))
 }
 
+export async function createDVIR(input: import('../types').DVIRInput): Promise<import('../types').DVIRInspection> {
+  await wait()
+  const inspection: import('../types').DVIRInspection = { ...input, id: createId('dvir') }
+  mutate((state) => ({
+    ...state,
+    dvirInspections: [inspection, ...(state.dvirInspections ?? [])],
+  }))
+  return inspection
+}
+
+export async function createAlert(input: Omit<Alert, 'id' | 'createdAt' | 'read'>): Promise<Alert> {
+  await wait(50)
+  const alert: Alert = {
+    ...input,
+    id: createId('alt'),
+    createdAt: new Date().toISOString(),
+    read: false,
+  }
+  mutate((state) => ({
+    ...state,
+    alerts: [alert, ...state.alerts],
+  }))
+  return alert
+}
+
 export async function saveSettings(settings: FleetState['settings']): Promise<FleetState['settings']> {
   await wait(160)
   mutate((state) => ({ ...state, settings }))
   return settings
 }
+

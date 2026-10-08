@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DVIRModal } from '../components/DVIRModal'
 import { VehicleFormModal } from '../components/EntityForms'
 import { VehicleStatusBadge } from '../components/StatusBadge'
 import { ConfirmDialog, EmptyState, LoadingBlock } from '../components/ui/Feedback'
 import { Button } from '../components/ui/Button'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
-import { driverName, formatDate, formatMiles, labelize } from '../utils/format'
+import { driverName, formatDate, formatDateTime, formatMiles, labelize } from '../utils/format'
 
 export function VehicleDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data, loading, updateVehicle, deleteVehicle } = useFleet()
+  const { data, loading, updateVehicle, deleteVehicle, createDVIR } = useFleet()
   const { notify } = useToast()
   const [edit, setEdit] = useState(false)
+  const [dvirOpen, setDvirOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -21,6 +23,7 @@ export function VehicleDetailPage() {
   const driver = data?.drivers.find((item) => item.id === vehicle?.assignedDriverId)
   const trips = data?.trips.filter((item) => item.vehicleId === id) ?? []
   const work = data?.maintenance.filter((item) => item.vehicleId === id) ?? []
+  const dvirs = (data?.dvirInspections ?? []).filter((item) => item.vehicleId === id)
   const drivers = (data?.drivers ?? []).map((d) => ({ id: d.id, name: driverName(d.firstName, d.lastName) }))
 
   if (loading && !data) {
@@ -53,6 +56,9 @@ export function VehicleDetailPage() {
           </p>
         </div>
         <div className="header-actions">
+          <Button variant="ghost" onClick={() => setDvirOpen(true)}>
+            📋 Log DVIR
+          </Button>
           <Button variant="ghost" onClick={() => setEdit(true)}>
             Edit
           </Button>
@@ -115,35 +121,78 @@ export function VehicleDetailPage() {
           )}
         </section>
       </div>
-      <section className="card card-pad" style={{ marginTop: 14 }}>
-        <h2>Maintenance history</h2>
-        {work.length === 0 ? (
-          <p className="muted">No work orders.</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>WO</th>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Vendor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {work.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.workOrder}</td>
-                    <td>{order.title}</td>
-                    <td>{labelize(order.status)}</td>
-                    <td>{order.vendor}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+      <div className="grid-2" style={{ marginTop: 14 }}>
+        <section className="card card-pad">
+          <div className="card-head">
+            <h2>Safety & DVIR Inspections</h2>
+            <Button size="sm" variant="ghost" onClick={() => setDvirOpen(true)}>
+              + Inspect
+            </Button>
           </div>
-        )}
-      </section>
+          {dvirs.length === 0 ? (
+            <p className="muted small">No inspection reports recorded yet. Click "+ Inspect" to submit a pre-trip or post-trip safety checklist.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Signed By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dvirs.map((dvir) => (
+                    <tr key={dvir.id}>
+                      <td>{formatDateTime(dvir.inspectedAt)}</td>
+                      <td>{labelize(dvir.type)}</td>
+                      <td>
+                        <span className={`tag ${dvir.status === 'passed' ? 'active' : 'out_of_service'}`}>
+                          {dvir.status === 'passed' ? 'Passed' : `${dvir.defects.length} Defects`}
+                        </span>
+                      </td>
+                      <td className="small">{dvir.signedBy}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="card card-pad">
+          <h2>Maintenance history</h2>
+          {work.length === 0 ? (
+            <p className="muted small">No work orders.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>WO</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Vendor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {work.map((order) => (
+                    <tr key={order.id}>
+                      <td>{order.workOrder}</td>
+                      <td>{order.title}</td>
+                      <td>{labelize(order.status)}</td>
+                      <td>{order.vendor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+
       <VehicleFormModal
         open={edit}
         initial={vehicle}
@@ -152,6 +201,19 @@ export function VehicleDetailPage() {
         onSave={async (input) => {
           await updateVehicle(vehicle.id, input)
           notify('success', 'Vehicle updated')
+        }}
+      />
+      <DVIRModal
+        open={dvirOpen}
+        vehicleId={vehicle.id}
+        unitNumber={vehicle.unitNumber}
+        driverId={driver?.id ?? null}
+        driverName={driver ? driverName(driver.firstName, driver.lastName) : ''}
+        currentMileage={vehicle.mileage}
+        onClose={() => setDvirOpen(false)}
+        onSave={async (input) => {
+          await createDVIR(input)
+          notify('success', 'DVIR inspection report logged')
         }}
       />
       <ConfirmDialog
@@ -174,3 +236,4 @@ export function VehicleDetailPage() {
     </div>
   )
 }
+

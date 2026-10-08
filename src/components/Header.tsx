@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useFleet } from '../hooks/useFleet'
@@ -16,6 +17,19 @@ export function Header({
   const { data } = useFleet()
   const navigate = useNavigate()
   const unread = data?.alerts.some((alert) => !alert.read)
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('horizon_theme') as 'light' | 'dark') || 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('horizon_theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
 
   return (
     <header className="topbar">
@@ -37,7 +51,16 @@ export function Header({
         />
       </label>
       <div className="topbar-actions">
-        <Link to="/alerts" className="icon-btn" aria-label="Alerts">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+          aria-label="Toggle Dark/Light Mode"
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+        <Link to="/alerts" className="icon-btn" aria-label="Alerts" title="Alerts & Incidents">
           ⚑{unread ? <span className="ping" /> : null}
         </Link>
         <div className="user-chip">
@@ -60,3 +83,4 @@ export function Header({
     </header>
   )
 }
+

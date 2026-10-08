@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LoadFormModal } from '../components/EntityForms'
+import { RateCalculatorModal } from '../components/RateCalculatorModal'
 import { PageGate } from '../components/PageGate'
 import { LoadStatusBadge } from '../components/StatusBadge'
 import { EmptyState } from '../components/ui/Feedback'
@@ -10,7 +11,8 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
 import type { Load, LoadPriority, LoadStatus } from '../types'
-import { formatMoney, labelize } from '../utils/format'
+import { exportToCSV } from '../utils/csv'
+import { formatMoney, formatNumber, labelize } from '../utils/format'
 
 export function LoadsPage() {
   const { data, loading, error, createLoad, updateLoad } = useFleet()
@@ -19,14 +21,16 @@ export function LoadsPage() {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<LoadStatus | 'all'>('all')
   const [priority, setPriority] = useState<LoadPriority | 'all'>('all')
+  const [sortBy, setSortBy] = useState<'default' | 'revenue_desc' | 'weight_desc'>('default')
   const [open, setOpen] = useState(false)
+  const [rateCalcOpen, setRateCalcOpen] = useState(false)
   const [editing, setEditing] = useState<Load | null>(null)
   const q = useDebouncedValue(query)
   const trips = (data?.trips ?? []).map((t) => ({ id: t.id, name: t.tripNumber }))
 
   const rows = useMemo(() => {
     if (!data) return []
-    return data.loads.filter((load) => {
+    const filtered = data.loads.filter((load) => {
       const hay = `${load.loadNumber} ${load.customer} ${load.pickup} ${load.dropoff} ${load.commodity}`.toLowerCase()
       return (
         hay.includes(q.toLowerCase()) &&
@@ -34,7 +38,34 @@ export function LoadsPage() {
         (priority === 'all' || load.priority === priority)
       )
     })
-  }, [data, q, status, priority])
+
+    if (sortBy === 'revenue_desc') {
+      return [...filtered].sort((a, b) => b.revenue - a.revenue)
+    }
+    if (sortBy === 'weight_desc') {
+      return [...filtered].sort((a, b) => b.weightLbs - a.weightLbs)
+    }
+    return filtered
+  }, [data, q, status, priority, sortBy])
+
+  const handleExportCSV = () => {
+    if (!data) return
+    exportToCSV('freight_loads', rows, [
+      { key: 'loadNumber', label: 'Load #' },
+      { key: 'customer', label: 'Customer' },
+      { key: 'pickup', label: 'Pickup Location' },
+      { key: 'dropoff', label: 'Dropoff Location' },
+      { key: 'commodity', label: 'Commodity' },
+      { key: 'weightLbs', label: 'Weight (lbs)' },
+      { key: 'pieces', label: 'Pieces' },
+      { key: 'priority', label: 'Priority' },
+      { key: 'status', label: 'Status' },
+      { key: 'revenue', label: 'Revenue ($)' },
+      { key: 'pickupWindow', label: 'Pickup Window' },
+      { key: 'deliveryWindow', label: 'Delivery Window' },
+    ])
+    notify('info', 'Exported loads to CSV')
+  }
 
   return (
     <PageGate loading={loading} error={error} ready={Boolean(data)}>
@@ -45,14 +76,22 @@ export function LoadsPage() {
               <h1>Loads</h1>
               <p>{data.loads.length} freight records · {formatMoney(data.loads.reduce((s, l) => s + l.revenue, 0))} booked</p>
             </div>
-            <Button
-              onClick={() => {
-                setEditing(null)
-                setOpen(true)
-              }}
-            >
-              Create load
-            </Button>
+            <div className="header-actions">
+              <Button variant="ghost" onClick={() => setRateCalcOpen(true)}>
+                🧮 Rate Calculator
+              </Button>
+              <Button variant="ghost" onClick={handleExportCSV}>
+                Export CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                Create load
+              </Button>
+            </div>
           </div>
           <div className="toolbar">
             <div className="grow">
@@ -72,6 +111,11 @@ export function LoadsPage() {
               <option value="expedited">Expedited</option>
               <option value="critical">Critical</option>
             </Select>
+            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+              <option value="default">Default Sort</option>
+              <option value="revenue_desc">Highest Revenue</option>
+              <option value="weight_desc">Heaviest Weight</option>
+            </Select>
           </div>
           <div className="card">
             {rows.length === 0 ? (
@@ -79,7 +123,7 @@ export function LoadsPage() {
                 title="No loads match"
                 body="Adjust filters or add a load."
                 action={
-                  <Button variant="ghost" onClick={() => { setQuery(''); setStatus('all'); setPriority('all') }}>
+                  <Button variant="ghost" onClick={() => { setQuery(''); setStatus('all'); setPriority('all'); setSortBy('default') }}>
                     Reset filters
                   </Button>
                 }
@@ -91,6 +135,7 @@ export function LoadsPage() {
                     <tr>
                       <th>Load</th>
                       <th>Lane</th>
+                      <th>Cargo</th>
                       <th>Status</th>
                       <th>Priority</th>
                       <th>Revenue</th>
@@ -106,6 +151,10 @@ export function LoadsPage() {
                         </td>
                         <td>
                           {load.pickup} → {load.dropoff}
+                        </td>
+                        <td>
+                          <div className="small">{load.commodity}</div>
+                          <div className="small muted">{formatNumber(load.weightLbs)} lbs · {load.pieces} pcs</div>
                         </td>
                         <td>
                           <LoadStatusBadge value={load.status} />
@@ -147,8 +196,13 @@ export function LoadsPage() {
               }
             }}
           />
+          <RateCalculatorModal
+            open={rateCalcOpen}
+            onClose={() => setRateCalcOpen(false)}
+          />
         </div>
       ) : null}
     </PageGate>
   )
 }
+

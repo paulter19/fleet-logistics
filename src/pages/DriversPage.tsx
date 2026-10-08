@@ -10,6 +10,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
 import type { Driver, DriverStatus } from '../types'
+import { exportToCSV } from '../utils/csv'
 import { driverName, formatDate } from '../utils/format'
 
 export function DriversPage() {
@@ -31,6 +32,24 @@ export function DriversPage() {
     })
   }, [data, q, status])
 
+  const handleExportCSV = () => {
+    if (!data) return
+    exportToCSV('fleet_drivers', rows, [
+      { key: 'firstName', label: 'First Name' },
+      { key: 'lastName', label: 'Last Name' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Phone' },
+      { key: 'status', label: 'Status' },
+      { key: 'licenseClass', label: 'License Class' },
+      { key: 'licenseNumber', label: 'License #' },
+      { key: 'licenseExpiresAt', label: 'License Expiration' },
+      { key: 'hireDate', label: 'Hire Date' },
+      { key: 'hosHoursRemaining', label: 'HOS Remaining (Hours)' },
+      { key: 'homeTerminal', label: 'Home Terminal' },
+    ])
+    notify('info', 'Exported drivers to CSV')
+  }
+
   return (
     <PageGate loading={loading} error={error} ready={Boolean(data)}>
       {data ? (
@@ -40,14 +59,19 @@ export function DriversPage() {
               <h1>Drivers</h1>
               <p>{data.drivers.length} drivers · HOS and assignment at a glance</p>
             </div>
-            <Button
-              onClick={() => {
-                setEditing(null)
-                setOpen(true)
-              }}
-            >
-              Add driver
-            </Button>
+            <div className="header-actions">
+              <Button variant="ghost" onClick={handleExportCSV}>
+                Export CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                Add driver
+              </Button>
+            </div>
           </div>
           <div className="toolbar">
             <div className="grow">

@@ -138,6 +138,34 @@ export interface Alert {
   relatedTripId: string | null
 }
 
+export type DVIRType = 'pre_trip' | 'post_trip'
+export type DVIRStatus = 'passed' | 'defects_found' | 'repaired'
+
+export interface DVIRInspection {
+  id: string
+  vehicleId: string
+  driverId: string | null
+  type: DVIRType
+  status: DVIRStatus
+  odometer: number
+  inspectedAt: string
+  defects: string[]
+  notes: string
+  signedBy: string
+}
+
+export interface DVIRInput {
+  vehicleId: string
+  driverId: string | null
+  type: DVIRType
+  status: DVIRStatus
+  odometer: number
+  inspectedAt: string
+  defects: string[]
+  notes: string
+  signedBy: string
+}
+
 export interface CompanySettings {
   name: string
   terminal: string
@@ -155,6 +183,7 @@ export interface FleetState {
   maintenance: MaintenanceOrder[]
   fuelLogs: FuelLog[]
   alerts: Alert[]
+  dvirInspections?: DVIRInspection[]
   settings: CompanySettings
 }
 

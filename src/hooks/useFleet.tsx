@@ -34,6 +34,8 @@ interface FleetContextValue {
   deleteFuelLog: (id: string) => Promise<void>
   markAlertRead: (id: string, read?: boolean) => Promise<void>
   markAllAlertsRead: () => Promise<void>
+  createAlert: (input: Omit<import('../types').Alert, 'id' | 'createdAt' | 'read'>) => Promise<void>
+  createDVIR: (input: import('../types').DVIRInput) => Promise<void>
   saveSettings: (settings: FleetState['settings']) => Promise<void>
   restoreDemoData: () => Promise<void>
 }
@@ -93,6 +95,8 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       deleteFuelLog: (id) => run(() => fleetService.deleteFuelLog(id)),
       markAlertRead: (id, read) => run(() => fleetService.markAlertRead(id, read)),
       markAllAlertsRead: () => run(() => fleetService.markAllAlertsRead()),
+      createAlert: (input) => run(() => fleetService.createAlert(input)),
+      createDVIR: (input) => run(() => fleetService.createDVIR(input)),
       saveSettings: (settings) => run(() => fleetService.saveSettings(settings)),
       restoreDemoData: () => run(() => fleetService.restoreDemoData()),
     }),

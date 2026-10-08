@@ -9,6 +9,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
 import type { Vehicle, VehicleStatus } from '../types'
+import { exportToCSV } from '../utils/csv'
 import { driverName, formatMiles, labelize } from '../utils/format'
 
 export function VehiclesPage() {
@@ -38,6 +39,26 @@ export function VehiclesPage() {
     })
   }, [data, q, status, type])
 
+  const handleExportCSV = () => {
+    if (!data) return
+    exportToCSV('fleet_vehicles', rows, [
+      { key: 'unitNumber', label: 'Unit #' },
+      { key: 'vin', label: 'VIN' },
+      { key: 'plate', label: 'License Plate' },
+      { key: 'make', label: 'Make' },
+      { key: 'model', label: 'Model' },
+      { key: 'year', label: 'Year' },
+      { key: 'type', label: 'Type' },
+      { key: 'status', label: 'Status' },
+      { key: 'mileage', label: 'Mileage' },
+      { key: 'fuelLevel', label: 'Fuel Level (%)' },
+      { key: 'location', label: 'Current Location' },
+      { key: 'lastServiceAt', label: 'Last Service Date' },
+      { key: 'nextServiceDueMiles', label: 'Next PM (Miles)' },
+    ])
+    notify('info', 'Exported fleet units to CSV')
+  }
+
   if (loading && !data) {
     return (
       <div className="page">
@@ -60,14 +81,19 @@ export function VehiclesPage() {
           <h1>Vehicles</h1>
           <p>{data.vehicles.length} units · filter, inspect, and keep assignments current</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null)
-            setOpen(true)
-          }}
-        >
-          Add vehicle
-        </Button>
+        <div className="header-actions">
+          <Button variant="ghost" onClick={handleExportCSV}>
+            Export CSV
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null)
+              setOpen(true)
+            }}
+          >
+            Add vehicle
+          </Button>
+        </div>
       </div>
       <div className="toolbar">
         <div className="grow">

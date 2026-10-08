@@ -8,6 +8,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFleet } from '../hooks/useFleet'
 import { useToast } from '../hooks/useToast'
 import type { FuelLog } from '../types'
+import { exportToCSV } from '../utils/csv'
 import { driverName, formatDateTime, formatMoney, formatNumber } from '../utils/format'
 
 export function FuelPage() {
@@ -33,6 +34,34 @@ export function FuelPage() {
   const spend = data?.fuelLogs.reduce((sum, log) => sum + log.gallons * log.pricePerGallon, 0) ?? 0
   const gallons = data?.fuelLogs.reduce((sum, log) => sum + log.gallons, 0) ?? 0
 
+  const handleExportCSV = () => {
+    if (!data) return
+    exportToCSV<FuelLog>('fuel_receipts', rows, [
+      { key: 'filledAt', label: 'Date / Time' },
+      {
+        key: (l) => {
+          const v = data.vehicles.find((veh) => veh.id === l.vehicleId)
+          return v ? v.unitNumber : 'Unassigned'
+        },
+        label: 'Vehicle Unit',
+      },
+      {
+        key: (l) => {
+          const d = data.drivers.find((drv) => drv.id === l.driverId)
+          return d ? `${d.firstName} ${d.lastName}` : 'Unassigned'
+        },
+        label: 'Driver',
+      },
+      { key: 'station', label: 'Fuel Station / Brand' },
+      { key: 'location', label: 'Location' },
+      { key: 'gallons', label: 'Gallons' },
+      { key: 'pricePerGallon', label: 'Price Per Gallon ($)' },
+      { key: (l) => (l.gallons * l.pricePerGallon).toFixed(2), label: 'Total Cost ($)' },
+      { key: 'odometer', label: 'Odometer (Miles)' },
+    ])
+    notify('info', 'Exported fuel tickets to CSV')
+  }
+
   return (
     <PageGate loading={loading} error={error} ready={Boolean(data)}>
       {data ? (
@@ -44,7 +73,12 @@ export function FuelPage() {
                 {formatNumber(gallons)} gal logged · {formatMoney(spend, true)} spend
               </p>
             </div>
-            <Button onClick={() => setOpen(true)}>Log fuel</Button>
+            <div className="header-actions">
+              <Button variant="ghost" onClick={handleExportCSV}>
+                Export CSV
+              </Button>
+              <Button onClick={() => setOpen(true)}>Log fuel</Button>
+            </div>
           </div>
           <div className="stats">
             <article className="card stat">
